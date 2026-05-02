@@ -206,7 +206,7 @@ Ouvrez **http://localhost:8000** 🎉
 
 | Guide | Description |
 |-------|-------------|
-| [Administration](https://github.com/Liam4Chilll/FAMILY_RAG/blob/main/MANAGE.md) | Gestion, diagnostic et maintenance |
+| [Administration](https://github.com/Liamdbav/FAMILY_RAG/blob/main/MANAGE.md) | Gestion, diagnostic et maintenance |
 | [Changelog](CHANGELOG.md) | Historique complet des versions |
 
 ---
@@ -218,7 +218,7 @@ Ce projet est distribué sous licence **MIT**.
 ---
 
 <p align="center">
-  <strong>Construit avec ❤️ par <a href="https://github.com/Liam4Chilll">Liam4Chilll</a></strong>
+  <strong>Construit avec ❤️ par <a href="https://github.com/Liamdbav">Liam</a></strong>
 </p>
 
 <p align="center">

@@ -41,3 +41,4 @@ index/
 
 # Docker
 *.log
+AUDIT_REPORT.md

@@ -258,16 +258,16 @@ Les tests ne requièrent **ni Ollama ni FAISS** — le moteur RAG est entièreme
 
 ---
 
-## 📜 Licence
+## Licence
 
-Ce projet est distribué sous licence **MIT**.
+MIT — voir [LICENSE](LICENSE)
 
 ---
 
-<p align="center">
-  <strong>Construit avec ❤️ par <a href="https://github.com/Liamdbav">Liam</a></strong>
-</p>
+<div align="center">
 
-<p align="center">
-  <em>FamilyRAG — Parce que vos données familiales méritent de rester en famille.</em>
-</p>
+Fait avec soin par **Liam**
+
+[![Follow on X](https://img.shields.io/badge/Follow-%40Liamdbav-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/Liamdbav)
+
+</div>

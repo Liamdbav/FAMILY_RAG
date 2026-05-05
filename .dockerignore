@@ -1,0 +1,41 @@
+# Secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Git
+.git
+.gitignore
+
+# Docs & config dev
+README.md
+CHANGELOG.md
+AUDIT_REPORT.md
+MANAGE.md
+*.md
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Index vectoriel local (monté en volume en production)
+app/index/
+index/
+
+# macOS
+.DS_Store
+
+# Éditeurs
+.idea/
+.vscode/
+*.swp

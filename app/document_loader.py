@@ -1,14 +1,15 @@
 """Chargement et parsing des documents multi-formats."""
 
-import os
 import re
 import email
+import logging
 import chardet
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
+from fastapi import HTTPException
 from langchain.schema import Document
 from pypdf import PdfReader
 from docx import Document as DocxDocument
@@ -16,6 +17,8 @@ import pytesseract
 from PIL import Image
 
 from config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,19 +33,19 @@ class LoadedDocument:
 
 class DocumentLoader:
     """Chargeur de documents multi-formats."""
-    
+
     SUPPORTED_EXTENSIONS = {'.pdf', '.txt', '.md', '.docx', '.eml', '.jpg', '.jpeg', '.png'}
-    
+
     def __init__(self):
         self.settings = get_settings()
         self.data_dir = Path(self.settings.data_dir)
-    
+
     def list_files(self) -> List[dict]:
         """Liste tous les fichiers supportés dans le dossier data."""
         files = []
         if not self.data_dir.exists():
             return files
-        
+
         for file_path in self.data_dir.rglob('*'):
             if file_path.is_file() and file_path.suffix.lower() in self.SUPPORTED_EXTENSIONS:
                 files.append({
@@ -51,7 +54,7 @@ class DocumentLoader:
                     'type': file_path.suffix.lower()[1:],
                     'size': file_path.stat().st_size
                 })
-        
+
         return sorted(files, key=lambda x: x['name'].lower())
 
     def _extract_date(self, content: str, file_path: Path) -> Optional[str]:
@@ -82,7 +85,7 @@ class DocumentLoader:
                             return f"{parts[0]}-{parts[1]}-{parts[2]}"
                         else:  # DD-MM-YYYY
                             return f"{parts[2]}-{parts[1]}-{parts[0]}"
-                except:
+                except Exception:
                     pass
 
         # Chercher dans le contenu (premières 500 lignes)
@@ -96,7 +99,7 @@ class DocumentLoader:
         try:
             mtime = file_path.stat().st_mtime
             return datetime.fromtimestamp(mtime).strftime('%Y-%m-%d')
-        except:
+        except Exception:
             return None
 
     def _extract_year(self, file_path: Path, content: str = "") -> Optional[int]:
@@ -118,7 +121,7 @@ class DocumentLoader:
         try:
             mtime = file_path.stat().st_mtime
             return datetime.fromtimestamp(mtime).year
-        except:
+        except Exception:
             return None
 
     def _classify_document(self, content: str) -> str:
@@ -207,8 +210,8 @@ class DocumentLoader:
                 )
                 documents.append(doc)
 
-                # Log des métadonnées extraites
-                print(f"[Loader] {loaded.filename} → type:{doc_type}, année:{doc_year}, auteur:{doc_author or 'N/A'}")
+                logger.info("[Loader] %s → type:%s, année:%s, auteur:%s",
+                            loaded.filename, doc_type, doc_year, doc_author or 'N/A')
 
         return documents
 
@@ -223,25 +226,30 @@ class DocumentLoader:
         """
         documents = []
 
+        base_dir = self.data_dir.resolve()
+
         for relative_path in file_paths:
-            file_path = self.data_dir / relative_path
+            file_path = (self.data_dir / relative_path).resolve()
+
+            if not file_path.is_relative_to(base_dir):
+                raise HTTPException(status_code=403, detail=f"Accès refusé : chemin hors de /data ({relative_path})")
 
             if not file_path.exists():
-                print(f"[Loader] ⚠️ Fichier introuvable : {relative_path}")
+                logger.warning("[Loader] Fichier introuvable : %s", relative_path)
                 continue
 
             if not file_path.is_file():
                 continue
 
             if file_path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
-                print(f"[Loader] ⚠️ Extension non supportée : {relative_path}")
+                logger.warning("[Loader] Extension non supportée : %s", relative_path)
                 continue
 
             # Charger le fichier
             loaded = self._load_file(file_path)
 
             if loaded.error:
-                print(f"[Loader] ❌ Erreur chargement {loaded.filename}: {loaded.error}")
+                logger.error("[Loader] Erreur chargement %s: %s", loaded.filename, loaded.error)
             elif loaded.content:
                 # Extraire métadonnées enrichies
                 doc_date = self._extract_date(loaded.content, file_path)
@@ -269,17 +277,17 @@ class DocumentLoader:
                 )
                 documents.append(doc)
 
-                # Log des métadonnées extraites
-                print(f"[Loader] {loaded.filename} → type:{doc_type}, année:{doc_year}, auteur:{doc_author or 'N/A'}")
+                logger.info("[Loader] %s → type:%s, année:%s, auteur:%s",
+                            loaded.filename, doc_type, doc_year, doc_author or 'N/A')
 
-        print(f"[Loader] {len(documents)}/{len(file_paths)} fichiers chargés avec succès")
+        logger.info("[Loader] %d/%d fichiers chargés avec succès", len(documents), len(file_paths))
         return documents
-    
+
     def _load_file(self, file_path: Path) -> LoadedDocument:
         """Charge un fichier selon son extension."""
         ext = file_path.suffix.lower()
         size = file_path.stat().st_size
-        
+
         try:
             if ext == '.pdf':
                 content = self._load_pdf(file_path)
@@ -299,14 +307,14 @@ class DocumentLoader:
                     size_bytes=size,
                     error=f'Extension non supportée: {ext}'
                 )
-            
+
             return LoadedDocument(
                 filename=file_path.name,
                 content=content,
                 file_type=ext[1:],
                 size_bytes=size
             )
-            
+
         except Exception as e:
             return LoadedDocument(
                 filename=file_path.name,
@@ -315,7 +323,7 @@ class DocumentLoader:
                 size_bytes=size,
                 error=str(e)
             )
-    
+
     def _load_pdf(self, file_path: Path) -> str:
         """Extrait le texte d'un PDF."""
         reader = PdfReader(file_path)
@@ -325,27 +333,27 @@ class DocumentLoader:
             if text:
                 texts.append(text)
         return '\n\n'.join(texts)
-    
+
     def _load_text(self, file_path: Path) -> str:
         """Charge un fichier texte avec détection d'encodage."""
         raw = file_path.read_bytes()
         detected = chardet.detect(raw)
         encoding = detected.get('encoding', 'utf-8') or 'utf-8'
         return raw.decode(encoding, errors='replace')
-    
+
     def _load_docx(self, file_path: Path) -> str:
         """Extrait le texte d'un fichier Word."""
         doc = DocxDocument(file_path)
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         return '\n\n'.join(paragraphs)
-    
+
     def _load_eml(self, file_path: Path) -> str:
         """Extrait le contenu d'un email."""
         raw = file_path.read_bytes()
         msg = email.message_from_bytes(raw)
-        
+
         parts = []
-        
+
         # En-têtes
         if msg['subject']:
             parts.append(f"Sujet: {msg['subject']}")
@@ -355,9 +363,9 @@ class DocumentLoader:
             parts.append(f"À: {msg['to']}")
         if msg['date']:
             parts.append(f"Date: {msg['date']}")
-        
+
         parts.append('')  # Ligne vide
-        
+
         # Corps
         if msg.is_multipart():
             for part in msg.walk():
@@ -371,9 +379,9 @@ class DocumentLoader:
             if payload:
                 charset = msg.get_content_charset() or 'utf-8'
                 parts.append(payload.decode(charset, errors='replace'))
-        
+
         return '\n'.join(parts)
-    
+
     def _load_image(self, file_path: Path) -> str:
         """Extrait le texte d'une image via OCR (Tesseract)."""
         image = Image.open(file_path)

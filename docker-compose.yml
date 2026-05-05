@@ -6,7 +6,7 @@ services:
     # Sur Linux uniquement: décommentez la ligne suivante et mettez OLLAMA_HOST=localhost:11434 dans .env
     # network_mode: host
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ${HOST_DATA_PATH:?Définir HOST_DATA_PATH dans .env}:/data
       - family-rag-index:/app/index

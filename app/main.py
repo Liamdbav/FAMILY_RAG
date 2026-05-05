@@ -1,21 +1,22 @@
 """API FastAPI pour le système RAG."""
 
+import logging
 import httpx
-import uuid
-import shutil
 import psutil
-from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import Optional, List
 
+from starlette.concurrency import run_in_threadpool
+
 from config import get_settings
 from rag_engine import RAGEngine
 
+logger = logging.getLogger(__name__)
 
 # Instance globale du moteur RAG
 rag_engine: Optional[RAGEngine] = None
@@ -79,7 +80,7 @@ async def home(request: Request):
 async def health():
     """Endpoint de health check."""
     settings = get_settings()
-    
+
     # Vérifier la connexion Ollama
     ollama_ok = False
     try:
@@ -89,9 +90,9 @@ async def health():
                 timeout=5.0
             )
             ollama_ok = response.status_code == 200
-    except:
+    except Exception:
         pass
-    
+
     return {
         "status": "healthy" if ollama_ok else "degraded",
         "ollama_connected": ollama_ok,
@@ -119,10 +120,11 @@ async def index_documents(request: IndexRequest = None):
         if not result['success']:
             raise HTTPException(status_code=400, detail=result.get('error', 'Indexation échouée'))
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        # Capturer toutes les erreurs et retourner un JSON propre
         error_message = str(e)
-        print(f"[API] Erreur indexation : {error_message}")
+        logger.error("[API] Erreur indexation : %s", error_message)
         return {
             'success': False,
             'error': f"Erreur lors de l'indexation : {error_message}",
@@ -148,10 +150,11 @@ async def query(request: QueryRequest):
     if request.selected_sources and len(request.selected_sources) > 0:
         filter_metadata = {'source': request.selected_sources}
 
-    result = rag_engine.query(
+    result = await run_in_threadpool(
+        rag_engine.query,
         request.question,
         request.top_k,
-        filter_metadata=filter_metadata
+        filter_metadata=filter_metadata,
     )
 
     # Ajouter les chunks détaillés pour debug
@@ -181,7 +184,7 @@ async def get_stats():
     """Retourne les statistiques de l'index."""
     stats = rag_engine.get_stats()
     settings = get_settings()
-    
+
     return {
         "index": {
             "exists": stats.index_exists,
@@ -367,9 +370,10 @@ async def get_system_metrics():
 @app.post("/api/vision")
 async def analyze_image(request: VisionRequest):
     """Analyse une image avec un modèle vision (Ministral 3)."""
-    result = await rag_engine.analyze_image_with_vision(
+    result = await run_in_threadpool(
+        rag_engine.analyze_image_with_vision,
         request.image_path,
-        request.question
+        request.question,
     )
     return result
 

@@ -257,11 +257,11 @@ Les tests ne requièrent **ni Ollama ni FAISS** — le moteur RAG est entièreme
 | [Changelog](CHANGELOG.md) | Historique complet des versions |
 
 ---
-
+<div align="center">
 ## Licence
 
 MIT — voir [LICENSE](LICENSE)
-
+</div>
 ---
 
 <div align="center">

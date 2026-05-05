@@ -76,6 +76,13 @@ Refonte graphique complète avec 3 thèmes plus poussés remplaçant les 6 préc
 - **Sélection de sources par conversation** — Limitez la recherche à des documents spécifiques pour chaque discussion
 - **Persistance** — Reprenez vos conversations là où vous les avez laissées
 
+### 🔒 Sécurité & Qualité (post-audit)
+
+- **Gardes LFI** — Toute tentative de path traversal (`../../etc/passwd`) est bloquée avec HTTP 403 sur les endpoints `/api/index` et `/api/vision`
+- **Interface 100 % hors-ligne** — Tailwind CSS et Alpine.js servis localement (`/static/`) ; aucune requête CDN externe
+- **Suite de tests** — 40 tests pytest couvrant les routes API, les gardes de sécurité et les scénarios d'erreur
+- **Logs structurés** — Tous les `print()` remplacés par `logging` avec niveaux INFO / WARNING / ERROR
+
 ---
 
 ## 🎯 Rappel v2.6 — Précision RAG +65%
@@ -135,7 +142,7 @@ La v2.6 avait apporté une refonte majeure du pipeline de recherche :
 │          ▼                  │  │  + Dashboard metrics     │  │  │
 │  ┌─────────────────┐        │  └──────────────────────────┘  │  │
 │  │  Apple Silicon  │        │                                │  │
-│  │   M1/M2/M3      │        │        localhost:8000          │  │
+│  │   M1/M2/M3      │        │   127.0.0.1:8000 (local only)  │  │
 │  └─────────────────┘        └────────────────────────────────┘  │
 │                                        ▲                        │
 │  ┌─────────────────┐                   │                        │
@@ -144,6 +151,8 @@ La v2.6 avait apporté une refonte majeure du pipeline de recherche :
 │  └─────────────────┘                                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+Par défaut, le port 8000 est lié à `127.0.0.1` — l'application n'est accessible que depuis la machine hôte. Pour l'exposer sur le réseau local, modifiez `docker-compose.yml` (voir [Guide d'administration](https://github.com/Liamdbav/FAMILY_RAG/blob/main/MANAGE.md)).
 
 ---
 
@@ -164,8 +173,8 @@ ollama --version
 ### 1. Cloner et configurer
 
 ```bash
-git clone https://github.com/Liam4Chilll/family-rag.git
-cd family-rag
+git clone https://github.com/Liamdbav/FAMILY_RAG.git
+cd FAMILY_RAG
 cp .env.example .env
 ```
 
@@ -235,8 +244,8 @@ Les tests ne requièrent **ni Ollama ni FAISS** — le moteur RAG est entièreme
 
 | Fichier | Couverture |
 |---------|------------|
-| `tests/test_security.py` | Traversées de répertoire (LFI) sur `DocumentLoader` et `RAGEngine` |
-| `tests/test_api.py` | Routes FastAPI principales + gestion des erreurs |
+| `tests/test_security.py` | Traversées de répertoire (LFI) sur `DocumentLoader` et `RAGEngine` — 13 tests |
+| `tests/test_api.py` | Routes FastAPI principales + gestion des erreurs — 27 tests |
 
 ---
 

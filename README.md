@@ -202,6 +202,44 @@ Ouvrez **http://localhost:8000** 🎉
 
 ---
 
+## ⚙️ Variables d'environnement
+
+Toutes les variables sont déclarées dans `.env` (copié depuis `.env.example`).
+
+| Variable | Défaut | Obligatoire | Description |
+|----------|--------|:-----------:|-------------|
+| `HOST_DATA_PATH` | — | ✅ | Chemin absolu vers le dossier de documents sur l'hôte |
+| `OLLAMA_HOST` | `host.docker.internal:11434` | | Adresse du serveur Ollama (`host:port`) — `localhost:11434` sur Linux avec `network_mode: host` |
+| `EMBEDDING_MODEL` | `nomic-embed-text` | | Modèle Ollama utilisé pour la vectorisation des documents |
+| `LLM_MODEL` | _(auto-détecté)_ | | Modèle de génération Ollama ; si vide, le premier modèle disponible est sélectionné automatiquement |
+| `CHUNK_SIZE` | `1200` | | Taille maximale d'un chunk en caractères |
+| `CHUNK_OVERLAP` | `300` | | Chevauchement entre chunks consécutifs (en caractères) |
+| `TOP_K` | `12` | | Nombre de chunks récupérés par requête RAG avant re-ranking |
+| `TEMPERATURE` | `0.7` | | Créativité du LLM (`0` = précis et factuel, `1` = créatif) |
+
+> **Note Linux** : remplacez `OLLAMA_HOST=host.docker.internal:11434` par `OLLAMA_HOST=localhost:11434` et décommentez `network_mode: host` dans `docker-compose.yml`.
+
+---
+
+## 🧪 Tests
+
+Les tests nécessitent `pytest` et les dépendances applicatives :
+
+```bash
+pip install pytest
+# Depuis la racine du projet
+pytest tests/ -v
+```
+
+Les tests ne requièrent **ni Ollama ni FAISS** — le moteur RAG est entièrement simulé.
+
+| Fichier | Couverture |
+|---------|------------|
+| `tests/test_security.py` | Traversées de répertoire (LFI) sur `DocumentLoader` et `RAGEngine` |
+| `tests/test_api.py` | Routes FastAPI principales + gestion des erreurs |
+
+---
+
 ## 📖 Documentation
 
 | Guide | Description |
